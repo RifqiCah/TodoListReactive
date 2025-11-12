@@ -28,16 +28,26 @@ fun TodoScreen(vm: TodoViewModel = viewModel()) {
     val todos by vm.todos.collectAsState()
     var text by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf("Semua") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    val filteredTodos = when (filter) {
-        "Aktif" -> todos.filter { !it.isDone }
-        "Selesai" -> todos.filter { it.isDone }
-        else -> todos
-    }
-
+    // Hitung jumlah tugas
     val activeCount = todos.count { !it.isDone }
     val completedCount = todos.count { it.isDone }
 
+    // Gabungan filter & pencarian
+    val filteredTodos = todos
+        .filter {
+            when (filter) {
+                "Aktif" -> !it.isDone
+                "Selesai" -> it.isDone
+                else -> true
+            }
+        }
+        .filter {
+            it.title.contains(searchQuery, ignoreCase = true)
+        }
+
+    // UI utama
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -55,6 +65,7 @@ fun TodoScreen(vm: TodoViewModel = viewModel()) {
                 .fillMaxSize()
                 .padding(top = 16.dp)
         ) {
+            // Header
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -76,6 +87,7 @@ fun TodoScreen(vm: TodoViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Input tambah tugas
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -140,6 +152,7 @@ fun TodoScreen(vm: TodoViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Filter chip bar
             FilterBar(
                 selectedFilter = filter,
                 onFilterChange = { filter = it },
@@ -147,8 +160,25 @@ fun TodoScreen(vm: TodoViewModel = viewModel()) {
                 completedCount = completedCount
             )
 
+            // 🔍 Kolom pencarian
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Cari tugas...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF6366F1),
+                    unfocusedBorderColor = Color(0xFFE5E7EB)
+                )
+            )
+
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Daftar tugas atau pesan kosong
             if (filteredTodos.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -163,9 +193,10 @@ fun TodoScreen(vm: TodoViewModel = viewModel()) {
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = when (filter) {
-                                "Aktif" -> "Tidak ada tugas aktif"
-                                "Selesai" -> "Belum ada tugas selesai"
+                            text = when {
+                                searchQuery.isNotBlank() -> "Tidak ada hasil pencarian"
+                                filter == "Aktif" -> "Tidak ada tugas aktif"
+                                filter == "Selesai" -> "Belum ada tugas selesai"
                                 else -> "Belum ada tugas"
                             },
                             fontSize = 18.sp,
